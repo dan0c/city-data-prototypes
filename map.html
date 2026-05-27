@@ -37,21 +37,151 @@
         gap: 0.3rem;
         transition: color 0.15s;
       }
-
       .back-link:hover { color: #ffffff; }
+      .divider { color: #3d5a54; }
+      h1 { font-size: 1rem; font-weight: 600; color: #ffffff; flex: 1; }
 
-      .divider {
-        color: #3d5a54;
-        font-size: 1rem;
+      /* Map container */
+      #map { flex: 1; position: relative; }
+
+      /* ── Layer switcher panel ───────────────────────────────────────── */
+      .layer-switcher {
+        position: absolute;
+        top: 1rem;
+        left: 1rem;
+        z-index: 2;
+        background: rgba(255,255,255,0.97);
+        border-radius: 6px;
+        box-shadow: 0 1px 8px rgba(0,0,0,0.18);
+        width: 200px;
+        overflow: hidden;
       }
 
-      h1 {
-        font-size: 1rem;
-        font-weight: 600;
-        color: #ffffff;
+      .ls-header {
+        background: #1a2e28;
+        color: #fff;
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        padding: 0.5rem 0.75rem;
       }
 
-      #map { flex: 1; }
+      .ls-group {
+        padding: 0.35rem 0;
+        border-bottom: 1px solid #eee;
+      }
+      .ls-group:last-child { border-bottom: none; }
+
+      .ls-group-label {
+        font-size: 0.65rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        color: #999;
+        padding: 0.4rem 0.75rem 0.2rem;
+      }
+
+      .ls-row {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.3rem 0.75rem;
+        cursor: pointer;
+        user-select: none;
+        transition: background 0.1s;
+      }
+      .ls-row:hover { background: #f5f5f3; }
+
+      /* Custom checkbox */
+      .ls-check {
+        width: 15px;
+        height: 15px;
+        border: 1.5px solid #bbb;
+        border-radius: 3px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.1s, border-color 0.1s;
+      }
+      .ls-row.on .ls-check {
+        background: #1a2e28;
+        border-color: #1a2e28;
+      }
+      .ls-check-tick {
+        display: none;
+        width: 9px;
+        height: 6px;
+        border-left: 2px solid #fff;
+        border-bottom: 2px solid #fff;
+        transform: rotate(-45deg) translate(1px, -1px);
+      }
+      .ls-row.on .ls-check-tick { display: block; }
+
+      .ls-swatch {
+        width: 12px;
+        height: 12px;
+        border-radius: 2px;
+        flex-shrink: 0;
+      }
+
+      /* Gradient swatch for choropleth layers */
+      .ls-swatch-gradient {
+        width: 36px;
+        height: 12px;
+        border-radius: 2px;
+        flex-shrink: 0;
+      }
+
+      .ls-label {
+        font-size: 0.78rem;
+        color: #333;
+        line-height: 1.3;
+        flex: 1;
+      }
+      .ls-row.off .ls-label { color: #aaa; }
+
+      /* ── Legend ─────────────────────────────────────────────────────── */
+      .legend {
+        position: absolute;
+        bottom: 2rem;
+        left: 1rem;
+        z-index: 2;
+        background: rgba(255,255,255,0.97);
+        border-radius: 6px;
+        padding: 0.75rem 1rem;
+        font-size: 0.75rem;
+        color: #333;
+        box-shadow: 0 1px 6px rgba(0,0,0,0.15);
+        min-width: 170px;
+      }
+
+      .legend h3 {
+        font-size: 0.65rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        color: #888;
+        margin-bottom: 0.45rem;
+      }
+      .legend-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.28rem;
+      }
+      .legend-swatch {
+        width: 13px;
+        height: 13px;
+        border-radius: 2px;
+        flex-shrink: 0;
+      }
+      .legend-divider {
+        border: none;
+        border-top: 1px solid #eee;
+        margin: 0.5rem 0;
+      }
     </style>
   </head>
   <body>
@@ -62,7 +192,61 @@
       <h1>Flood Risk Prototype</h1>
     </header>
 
-    <div id="map"></div>
+    <div id="map">
+
+      <!-- Layer switcher -->
+      <div class="layer-switcher">
+        <div class="ls-header">Layers</div>
+
+        <div class="ls-group">
+          <div class="ls-group-label">Population</div>
+          <div class="ls-row on" data-layers="density-fill">
+            <div class="ls-check"><div class="ls-check-tick"></div></div>
+            <div class="ls-swatch-gradient" style="background: linear-gradient(to right, #e8eef8, #a8bfde, #6b92c3, #3a5fa0, #1a3364)"></div>
+            <span class="ls-label">Density (tracts)</span>
+          </div>
+        </div>
+
+        <div class="ls-group">
+          <div class="ls-group-label">Flood zones</div>
+          <div class="ls-row on" data-layers="flood-zones-fill,flood-zones-outline">
+            <div class="ls-check"><div class="ls-check-tick"></div></div>
+            <div class="ls-swatch-gradient" style="background: linear-gradient(to right, #f5c842, #e8602c, #d7191c)"></div>
+            <span class="ls-label">FEMA NFHL (polygons)</span>
+          </div>
+        </div>
+
+        <div class="ls-group">
+          <div class="ls-group-label">z18 grid (~130m cells)</div>
+          <div class="ls-row off" data-layers="density-grid-fill">
+            <div class="ls-check"><div class="ls-check-tick"></div></div>
+            <div class="ls-swatch-gradient" style="background: linear-gradient(to right, #e8eef8, #a8bfde, #6b92c3, #3a5fa0, #1a3364)"></div>
+            <span class="ls-label">Density (grid)</span>
+          </div>
+          <div class="ls-row off" data-layers="flood-grid-fill">
+            <div class="ls-check"><div class="ls-check-tick"></div></div>
+            <div class="ls-swatch-gradient" style="background: linear-gradient(to right, #f5c842, #e8602c, #d7191c)"></div>
+            <span class="ls-label">Flood zones (grid)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Legend -->
+      <div class="legend" id="legend">
+        <h3>Population density</h3>
+        <div class="legend-row"><span class="legend-swatch" style="background:#e8eef8"></span> &lt; 1,554 / km²</div>
+        <div class="legend-row"><span class="legend-swatch" style="background:#a8bfde"></span> 1,554 – 2,259</div>
+        <div class="legend-row"><span class="legend-swatch" style="background:#6b92c3"></span> 2,259 – 3,090</div>
+        <div class="legend-row"><span class="legend-swatch" style="background:#3a5fa0"></span> 3,090 – 3,710</div>
+        <div class="legend-row"><span class="legend-swatch" style="background:#1a3364"></span> &gt; 3,710 / km²</div>
+        <hr class="legend-divider">
+        <h3>Flood zones</h3>
+        <div class="legend-row"><span class="legend-swatch" style="background:#d7191c;opacity:0.7"></span> VE (coastal high risk)</div>
+        <div class="legend-row"><span class="legend-swatch" style="background:#e8602c;opacity:0.7"></span> AE (1% annual chance)</div>
+        <div class="legend-row"><span class="legend-swatch" style="background:#f5c842;opacity:0.7"></span> A / AO / AH</div>
+      </div>
+
+    </div>
 
     <script>
       mapboxgl.accessToken = window.MAPBOX_TOKEN;
@@ -70,46 +254,109 @@
       const map = new mapboxgl.Map({
         container: 'map',
         style: 'mapbox://styles/mapbox/streets-v12',
-        center: [-90.0715, 29.9511], // New Orleans
+        center: [-90.0715, 29.9511],
         zoom: 11
       });
 
       map.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
+      const BP = [1554, 2259, 3090, 3710];
+
       map.on('load', () => {
+
+        // Population density (census tracts)
+        map.addSource('population-density', {
+          type: 'geojson',
+          data: '/data/population-density.geojson'
+        });
+        map.addLayer({
+          id: 'density-fill',
+          type: 'fill',
+          source: 'population-density',
+          paint: {
+            'fill-color': ['step', ['get', 'density'],
+              '#e8eef8', BP[0], '#a8bfde', BP[1], '#6b92c3', BP[2], '#3a5fa0', BP[3], '#1a3364'
+            ],
+            'fill-opacity': 0.75
+          }
+        });
+
+        // Population density grid (z18)
+        map.addSource('density-grid', {
+          type: 'geojson',
+          data: '/data/density-grid.geojson'
+        });
+        map.addLayer({
+          id: 'density-grid-fill',
+          type: 'fill',
+          source: 'density-grid',
+          layout: { visibility: 'none' },
+          paint: {
+            'fill-color': ['step', ['get', 'density'],
+              '#e8eef8', BP[0], '#a8bfde', BP[1], '#6b92c3', BP[2], '#3a5fa0', BP[3], '#1a3364'
+            ],
+            'fill-opacity': 0.85
+          }
+        });
+
+        // Flood zone grid (z18)
+        map.addSource('flood-grid', {
+          type: 'geojson',
+          data: '/data/flood-grid.geojson'
+        });
+        map.addLayer({
+          id: 'flood-grid-fill',
+          type: 'fill',
+          source: 'flood-grid',
+          layout: { visibility: 'none' },
+          paint: {
+            'fill-color': ['match', ['get', 'FLD_ZONE'],
+              'VE', '#d7191c', 'AE', '#e8602c',
+              'AO', '#f5a142', 'AH', '#f5a142', 'A', '#f5c842', '#f5c842'
+            ],
+            'fill-opacity': 0.75
+          }
+        });
+
+        // FEMA flood zones
         map.addSource('fema-flood-zones', {
           type: 'geojson',
           data: '/data/flood-zones.geojson',
           attribution: 'FEMA National Flood Hazard Layer'
         });
-
         map.addLayer({
           id: 'flood-zones-fill',
           type: 'fill',
           source: 'fema-flood-zones',
           paint: {
-            'fill-color': [
-              'match', ['get', 'FLD_ZONE'],
-              'VE', '#d7191c',
-              'AE', '#e8602c',
-              'AO', '#f5a142',
-              'AH', '#f5a142',
-              'A',  '#f5c842',
-              '#f5c842'
+            'fill-color': ['match', ['get', 'FLD_ZONE'],
+              'VE', '#d7191c', 'AE', '#e8602c',
+              'AO', '#f5a142', 'AH', '#f5a142', 'A', '#f5c842', '#f5c842'
             ],
-            'fill-opacity': 0.5
+            'fill-opacity': 0.45
           }
         });
-
         map.addLayer({
           id: 'flood-zones-outline',
           type: 'line',
           source: 'fema-flood-zones',
-          paint: {
-            'line-color': '#c0390b',
-            'line-width': 0.5,
-            'line-opacity': 0.6
-          }
+          paint: { 'line-color': '#c0390b', 'line-width': 0.5, 'line-opacity': 0.6 }
+        });
+      });
+
+      // ── Layer switcher logic ──────────────────────────────────────────
+      document.querySelectorAll('.ls-row').forEach(row => {
+        row.addEventListener('click', () => {
+          const isOn = row.classList.contains('on');
+          const newState = !isOn;
+          const vis = newState ? 'visible' : 'none';
+
+          row.classList.toggle('on', newState);
+          row.classList.toggle('off', !newState);
+
+          row.dataset.layers.split(',').forEach(id => {
+            if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', vis);
+          });
         });
       });
     </script>
