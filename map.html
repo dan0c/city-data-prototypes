@@ -75,6 +75,43 @@
       });
 
       map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+
+      map.on('load', () => {
+        map.addSource('fema-flood-zones', {
+          type: 'geojson',
+          data: '/data/flood-zones.geojson',
+          attribution: 'FEMA National Flood Hazard Layer'
+        });
+
+        map.addLayer({
+          id: 'flood-zones-fill',
+          type: 'fill',
+          source: 'fema-flood-zones',
+          paint: {
+            'fill-color': [
+              'match', ['get', 'FLD_ZONE'],
+              'VE', '#d7191c',
+              'AE', '#e8602c',
+              'AO', '#f5a142',
+              'AH', '#f5a142',
+              'A',  '#f5c842',
+              '#f5c842'
+            ],
+            'fill-opacity': 0.5
+          }
+        });
+
+        map.addLayer({
+          id: 'flood-zones-outline',
+          type: 'line',
+          source: 'fema-flood-zones',
+          paint: {
+            'line-color': '#c0390b',
+            'line-width': 0.5,
+            'line-opacity': 0.6
+          }
+        });
+      });
     </script>
 
   </body>
