@@ -146,16 +146,53 @@
       .legend {
         position: absolute;
         bottom: 2rem;
-        left: 1rem;
+        right: 3rem;
         z-index: 2;
         background: rgba(255,255,255,0.97);
         border-radius: 6px;
-        padding: 0.75rem 1rem;
         font-size: 0.75rem;
         color: #333;
         box-shadow: 0 1px 6px rgba(0,0,0,0.15);
         min-width: 170px;
+        overflow: hidden;
       }
+
+      .legend-titlebar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.5rem 0.75rem;
+        background: #1a2e28;
+        cursor: pointer;
+        user-select: none;
+      }
+
+      .legend-titlebar span {
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #fff;
+      }
+
+      .legend-chevron {
+        width: 12px;
+        height: 12px;
+        stroke: #9aada9;
+        fill: none;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        transition: transform 0.2s ease;
+        flex-shrink: 0;
+      }
+      .legend.collapsed .legend-chevron { transform: rotate(180deg); }
+
+      .legend-body {
+        padding: 0.75rem 1rem;
+        transition: none;
+      }
+      .legend.collapsed .legend-body { display: none; }
 
       .legend h3 {
         font-size: 0.65rem;
@@ -229,10 +266,24 @@
             <span class="ls-label">Flood zones (grid)</span>
           </div>
         </div>
+
+        <div class="ls-group">
+          <div class="ls-group-label">Combined risk</div>
+          <div class="ls-row off" data-layers="high-risk-fill">
+            <div class="ls-check"><div class="ls-check-tick"></div></div>
+            <div class="ls-swatch-gradient" style="background: linear-gradient(to right, #ffd700, #ff4500, #cc0020, #800060)"></div>
+            <span class="ls-label">High flood + high density</span>
+          </div>
+        </div>
       </div>
 
       <!-- Legend -->
       <div class="legend" id="legend">
+        <div class="legend-titlebar" id="legend-toggle">
+          <span>Legend</span>
+          <svg class="legend-chevron" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg>
+        </div>
+        <div class="legend-body">
         <h3>Population density</h3>
         <div class="legend-row"><span class="legend-swatch" style="background:#e8eef8"></span> &lt; 1,554 / km²</div>
         <div class="legend-row"><span class="legend-swatch" style="background:#a8bfde"></span> 1,554 – 2,259</div>
@@ -244,6 +295,13 @@
         <div class="legend-row"><span class="legend-swatch" style="background:#d7191c;opacity:0.7"></span> VE (coastal high risk)</div>
         <div class="legend-row"><span class="legend-swatch" style="background:#e8602c;opacity:0.7"></span> AE (1% annual chance)</div>
         <div class="legend-row"><span class="legend-swatch" style="background:#f5c842;opacity:0.7"></span> A / AO / AH</div>
+        <hr class="legend-divider">
+        <h3>Combined risk</h3>
+        <div class="legend-row"><span class="legend-swatch" style="background:#ffd700"></span> Lower (AE + moderate density)</div>
+        <div class="legend-row"><span class="legend-swatch" style="background:#ff4500"></span> Medium</div>
+        <div class="legend-row"><span class="legend-swatch" style="background:#cc0020"></span> High</div>
+        <div class="legend-row"><span class="legend-swatch" style="background:#800060"></span> Highest (VE + max density)</div>
+        </div><!-- /.legend-body -->
       </div>
 
     </div>
@@ -318,6 +376,27 @@
           }
         });
 
+        // High flood risk + high density combined layer
+        map.addSource('high-risk-grid', {
+          type: 'geojson',
+          data: '/data/high-risk-grid.geojson'
+        });
+        map.addLayer({
+          id: 'high-risk-fill',
+          type: 'fill',
+          source: 'high-risk-grid',
+          layout: { visibility: 'none' },
+          paint: {
+            'fill-color': ['interpolate', ['linear'], ['get', 'score'],
+              0.2, '#ffd700',
+              0.35, '#ff4500',
+              0.5, '#cc0020',
+              0.7, '#800060'
+            ],
+            'fill-opacity': 0.9
+          }
+        });
+
         // FEMA flood zones
         map.addSource('fema-flood-zones', {
           type: 'geojson',
@@ -343,6 +422,47 @@
           paint: { 'line-color': '#c0390b', 'line-width': 0.5, 'line-opacity': 0.6 }
         });
       });
+
+      // ── Legend collapse + drag ────────────────────────────────────────
+      const legend = document.getElementById('legend');
+      const legendToggle = document.getElementById('legend-toggle');
+
+      legendToggle.addEventListener('click', () => legend.classList.toggle('collapsed'));
+
+      // Draggable — track pointer offset from legend top-left
+      let dragging = false, dragOffX = 0, dragOffY = 0;
+
+      legendToggle.addEventListener('mousedown', e => {
+        // Collapse click still fires; only start drag if moved
+        dragging = false;
+        const rect = legend.getBoundingClientRect();
+        dragOffX = e.clientX - rect.left;
+        dragOffY = e.clientY - rect.top;
+
+        // Switch from bottom/right anchoring to top/left so we can freely position
+        legend.style.bottom = 'auto';
+        legend.style.right  = 'auto';
+        legend.style.left   = rect.left + 'px';
+        legend.style.top    = rect.top  + 'px';
+
+        const onMove = e => {
+          dragging = true;
+          legend.style.left = (e.clientX - dragOffX) + 'px';
+          legend.style.top  = (e.clientY - dragOffY) + 'px';
+        };
+        const onUp = () => {
+          window.removeEventListener('mousemove', onMove);
+          window.removeEventListener('mouseup', onUp);
+          // If we dragged, suppress the click-toggle that fires after mouseup
+          if (dragging) {
+            legendToggle.addEventListener('click', e => e.stopImmediatePropagation(), { once: true, capture: true });
+          }
+        };
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onUp);
+      });
+
+      legendToggle.style.cursor = 'grab';
 
       // ── Layer switcher logic ──────────────────────────────────────────
       document.querySelectorAll('.ls-row').forEach(row => {
